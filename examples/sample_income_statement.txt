@@ -1,0 +1,24 @@
+CONSOLIDATED STATEMENTS OF OPERATIONS
+(in thousands, except per share data)
+
+                                          Year ended Dec 31,
+                                        2024            2023
+Revenue                              $ 1,284,500     $ 1,102,340
+Cost of revenue                         (742,180)       (668,900)
+Gross profit                             542,320         433,440
+Research and development expenses        (96,400)        (84,120)
+Selling, general and administrative     (188,750)       (172,300)
+Operating income                         257,170         177,020
+Interest expense, net                    (18,300)        (21,450)
+Other income, net                          3,240           1,980
+Income before income taxes               242,110         157,550
+Provision for income taxes               (58,106)        (37,812)
+Net income                             $ 184,004       $ 119,738
+
+Earnings per share - diluted           $    1.84       $    1.21
+Weighted average shares outstanding      100,000          99,000
+
+NOTE 2 — ACCOUNTS RECEIVABLE
+Trade receivables are stated at net realisable value after deducting an allowance for doubtful
+accounts of $12,400 as of December 31, 2024 (2023: $9,870). The allowance is estimated based on
+historical loss experience and forward-looking information.
