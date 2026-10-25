@@ -1,120 +1,103 @@
-# Financial Statement Translator (EN → ZH)
+<p align="center">
+  <img src="docs/banner.svg" alt="Financial Statement Translator — a bilingual statement reader" width="1000">
+</p>
 
-Translate **English financial statements, annual reports, audit reports and financial data** into Chinese — with a built-in term base that locks professional terminology and a numeric check that flags dropped figures.
+<p align="center">
+  <a href="https://github.com/wsy1022/accounting-audit-en-zh/actions/workflows/build.yml"><img src="https://github.com/wsy1022/accounting-audit-en-zh/actions/workflows/build.yml/badge.svg" alt="build"></a>
+  <a href="https://github.com/wsy1022/accounting-audit-en-zh/releases"><img src="https://img.shields.io/github/v/release/wsy1022/accounting-audit-en-zh?label=release" alt="release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT%20%2B%20CC%20BY%204.0-blue" alt="license"></a>
+</p>
 
-[![build](https://github.com/wsy1022/accounting-audit-en-zh/actions/workflows/build.yml/badge.svg)](https://github.com/wsy1022/accounting-audit-en-zh/actions/workflows/build.yml)
-![license](https://img.shields.io/badge/license-MIT%20%2B%20CC%20BY%204.0-blue)
-
-![screenshot](docs/screenshot.png)
-
-Built for finance, audit, banking and cross-border teams — and for students who need to read an English 10-K without guessing what "provision" means.
-
-Two things live in this repo:
-
-| Directory | What it is | Who it's for |
-|---|---|---|
-| `skills/accounting-audit-en-zh/` | An agent skill: workflow + term base + translation rules + 155 sentence pairs | People who read filings with Claude / ChatGPT / Codex / Hermes |
-| `app/` | The runnable translator (GUI + CLI), shipped as a Windows exe | People who want to double-click and go |
+<p align="center">
+  Read an English statement in Chinese: one term base, figures that still foot, rows that stay in their row.<br>
+  For finance, audit and cross-border teams — and for students who need an English 10-K to make sense.
+</p>
 
 ---
 
-## 1. Term base (750 entries)
+## The problem is not translation. It is whether the result still ties out.
 
-`skills/accounting-audit-en-zh/references/glossary.csv` — **750 entries**:
+Machine translation of a financial statement rarely fails on the sentence. It fails in three places:
 
-- **629** core accounting & auditing terms (accounting principles, financial accounting, cost & management accounting, international accounting, auditing)
-- **179** statement line items (balance sheet, income statement, cash flow statement, statement of changes in equity, notes, auditor's report, financial ratios)
+- **Terms drift.** `provision` becomes "准备" in one row and "预计负债" in the next, and the reviewer can no longer tell whether it is the same thing.
+- **Figures disappear.** One bracketed negative swallowed by a long table, and the statement no longer balances.
+- **Rows shift.** The Chinese for line A lands beside line B, and the table becomes unusable.
 
-The CSV imports straight into Excel / Anki / any dictionary app. Look things up:
+Four gates hold those three failures down: targeted term injection, a post-translation term-compliance check, a numeric diff, and line-by-line alignment for statement-like input (`L<n>|` protocol).
+
+## Three ways in
+
+| You are | Take this route | Start here |
+|---|---|---|
+| I want to double-click | `FinancialStatementTranslator.exe` in Releases | Download → pick a file → paste an API key → **开始翻译** |
+| I want my AI assistant to read it | `skills/accounting-audit-en-zh/` | Drop the folder into your skills directory, then say "translate this balance sheet" |
+| I want to batch it in a script | CLI | `python app/translator.py --cli 10-K.docx -o 10-K_zh.docx` |
+
+Input: `txt / md / csv / docx / xlsx / pdf` (text layer). Output: bilingual Word, or Excel / plain text by extension.
+
+## The term base
+
+| Item | Count |
+|---|---:|
+| Textbook terms | 629 |
+| Statement line items | 179 |
+| Duplicates merged | (58) |
+| **Total terms** | **750** |
+
+629 + 179 − 58 = 750 — every row accounted for, none counted twice. Plus **155** English→Chinese sentence pairs in `sentence-patterns.md`; learning whole sentences pays better than learning words.
 
 ```bash
 python skills/accounting-audit-en-zh/scripts/term_lookup.py "net realisable value"
 python skills/accounting-audit-en-zh/scripts/term_lookup.py --zh 坏账准备
 ```
 
----
+The CSV imports straight into Excel, Anki or any dictionary app.
 
-## 2. Using the skill (AI assistant route)
+## Four gates
 
-Drop `skills/accounting-audit-en-zh/` into your skills directory (Claude Code: `~/.claude/skills/`; Hermes: `~/AppData/Local/hermes/skills/`), or paste `SKILL.md` at the top of a conversation.
-
-Then say *"translate this English balance sheet"* and the assistant follows this pipeline:
-
-1. Identify the framework (IFRS / US GAAP / CAS) and the units (thousands / millions)
-2. Rebuild the statement as a line-item table
-3. Apply the term base — never invent a synonym
-4. Verify numbers and cross-foot totals
-5. Deliver a bilingual table + a terminology report + an open-questions list
-
-Supporting references:
-
-- `references/statement-layouts.md` — structure of the four statements, notes and audit report, line-item mapping, layout traps
-- `references/translation-rules.md` — numbers, units, dates, and the classic confusions (`provision` vs `allowance` vs `reserve`, `income` vs `revenue` vs `gain`)
-- `references/sentence-patterns.md` — 155 English → Chinese sentence pairs, meant to be memorised whole
-
----
-
-## 3. Using the exe (no Python required)
-
-Download `FinancialStatementTranslator.exe` from [Releases](../../releases) and double-click:
-
-1. Pick a file (`.docx` `.xlsx` `.txt` `.md` `.csv` `.pdf`)
-2. Enter an API key (default endpoint is DeepSeek; OpenAI / any OpenAI-compatible endpoint works, including local Ollama)
-3. Hit **开始翻译** (Start) → get a bilingual Word document
-
-CLI works too (requires Python 3.9+):
-
-```bash
-python app/translator.py --cli 10-K.docx -o 10-K_zh.docx --bilingual
-python app/translator.py --cli balance_sheet.xlsx --zh-only
-```
-
-### How accuracy is enforced
-
-| Mechanism | Effect |
+| Mechanism | What it stops |
 |---|---|
-| Targeted term injection | Only the terms actually present in the source (≤80) go into the prompt — no diluted long lists |
-| Term compliance check | After translating, every expected rendering is verified; misses trigger one repair pass |
-| Numeric check | All figures in the source are extracted and diffed against the output; missing numbers are reported |
-| Line alignment | Statement-like input (many short lines) switches to a `L<n>\|` protocol, translating line by line so source and target never drift |
-| Structure preservation | Paragraph input is chunked; table rows are never merged, items never collapsed |
+| Targeted term injection | Only the terms present in the source (≤80) enter the prompt, so a long list never dilutes attention |
+| Term-compliance check | Every prescribed rendering is verified after translation; misses trigger one repair pass, then get reported |
+| Numeric diff | All figures in the source are compared against the output; anything missing is listed |
+| Line alignment | Statement-like input switches to the `L<n>\|` protocol, one source line to one target line |
 
-### Limitations (read before trusting it)
+## The app
 
-- **Not a replacement for a human reviewer.** Notes, contingencies and related-party disclosures still need a bilingual accountant's eyes.
-- No FX conversion and no unit scaling — figures are copied verbatim; the unit belongs in the header.
-- Scanned PDFs need OCR first.
+<p align="center">
+  <img src="docs/screenshot.png" alt="Translator interface" width="880">
+</p>
+
+## What it will not do
+
+- **It does not replace a reviewer.** Notes, contingencies and related-party disclosures still need a bilingual accountant.
+- No FX conversion, no unit scaling — figures are copied verbatim and the unit belongs in the header.
+- Scanned PDFs need OCR first; this reads the text layer only.
 - It is not audit, tax or investment advice.
 
----
-
-## 4. Layout
+## Repository layout
 
 ```
 accounting-audit-en-zh/
-├── README.md / README.en.md
-├── LICENSE
-├── .github/workflows/build.yml        # auto-build the exe on CI
 ├── skills/accounting-audit-en-zh/
-│   ├── SKILL.md
+│   ├── SKILL.md                        workflow + hard rules + delivery templates
 │   ├── references/
-│   │   ├── glossary.csv               # 750 entries
-│   │   ├── glossary-statements.csv    # the 179 statement items, maintained separately
-│   │   ├── statement-layouts.md
-│   │   ├── translation-rules.md
-│   │   └── sentence-patterns.md
-│   └── scripts/term_lookup.py
-└── app/
-    ├── translator.py                  # GUI + CLI
-    ├── glossary.json                  # bundled term base
-    ├── requirements.txt
-    ├── build_exe.bat
-    └── README.md
+│   │   ├── glossary.csv                750 terms
+│   │   ├── glossary-statements.csv     179 statement items, maintained separately
+│   │   ├── statement-layouts.md        four statements / notes / audit report
+│   │   ├── translation-rules.md        numbers, units, classic confusions
+│   │   └── sentence-patterns.md        155 sentence pairs
+│   └── scripts/term_lookup.py          bilingual lookup, EN ↔ ZH
+├── app/
+│   ├── translator.py                   GUI + CLI
+│   ├── glossary.json                   term base bundled into the exe
+│   └── build_exe.bat                   one-click packaging
+├── docs/                               banner.svg · screenshot.png
+├── examples/                           sample income statement + real output
+└── .github/workflows/build.yml         CI packaging
 ```
 
----
-
-## 5. Building the exe yourself
+## Build it yourself
 
 ```bash
 pip install pyinstaller python-docx openpyxl pymupdf
@@ -123,21 +106,14 @@ pyinstaller --noconfirm --onefile --windowed --name FinancialStatementTranslator
   --add-data "glossary.json;." translator.py
 ```
 
-Output lands in `app/dist/`. CI does the same thing on every push to `main` and on every `v*` tag
-(see `.github/workflows/build.yml`), so you can just download the artifact instead of building.
+Output lands in `app/dist/`. Or let CI do it: every push to `main` builds and uploads an artifact, every `v*` tag attaches the exe to the Release.
 
----
-
-## 6. Sources & disclaimer
+## Sources and licence
 
 - Terms and sentence patterns were compiled with reference to *Accounting and Auditing English* (贺欣, 温倩, 罗殿英; China Machine Press) for study and translation assistance. Copyright in the textbook remains with its authors and publisher.
-- Statement line items follow common IFRS / US GAAP presentation practice, mapped to PRC GAAP (《企业会计准则》) Chinese usage.
-- The term base is a factual bilingual glossary for study and reference. For commercial or regulatory use, verify against the current standards text.
+- Statement line items follow common IFRS / US GAAP presentation, mapped to PRC GAAP Chinese usage.
+- Code: MIT. Documentation and glossary: CC BY 4.0.
 
-## License
-
-Code: MIT. Documentation and glossary: CC BY 4.0.
-
----
-
-[中文版 README](README.md)
+<p align="center">
+  <sub><b>English</b> · <a href="README.md">中文</a></sub>
+</p>
