@@ -122,6 +122,7 @@ SYS_PROMPT = (
     "3) 数字、单位（thousand/million/billion）、百分号、括号负数、日期原样保留，不得四舍五入或改写。\n"
     "4) 保持原文的换行与条目结构，表格行与行之间不要合并。\n"
     "5) 专有名词（公司名、人名、准则编号 IFRS 15 / ASC 606 / ISA 700）保留英文原文。\n"
+    "6) 若原文每行带「L编号|」前缀，输出必须逐行对应、保留同样的编号前缀，不得合并、不得增删行。\n"
 )
 
 
@@ -219,8 +220,66 @@ def translate_one(text, cfg, log=None):
     return zh, hits
 
 
+def is_table_like(text):
+    """报表型输入：行多、行短。这类按行翻译，保证中英逐行对齐。"""
+    lines = [l for l in text.splitlines() if l.strip()]
+    if len(lines) < 5:
+        return False
+    lens = sorted(len(l) for l in lines)
+    return lens[len(lens) // 2] <= 110
+
+
+NUM_PREFIX = re.compile(r"^\s*L?(\d+)\s*[|｜]\s*(.*)$")
+
+
+def translate_lines(lines, cfg, log=None, batch=12):
+    """按行翻译：用 L编号| 协议保证一一对应；解析失败时退回整块翻译再切分。"""
+    out = []
+    for i in range(0, len(lines), batch):
+        chunk = lines[i:i + batch]
+        payload = "\n".join(f"L{j+1}| {l}" for j, l in enumerate(chunk))
+        hits = find_terms(payload)
+        zh = call_api(build_messages(payload, hits, cfg.get("strict_terms", True)), cfg)
+        got = {}
+        for raw in zh.splitlines():
+            m = NUM_PREFIX.match(raw)
+            if m:
+                got[int(m.group(1))] = m.group(2).strip()
+        if len(got) < len(chunk):
+            # 协议失败：整块译一次，按行数能否对齐决定是否拆分
+            block = call_api(build_messages("\n".join(chunk), find_terms("\n".join(chunk)),
+                                            cfg.get("strict_terms", True)), cfg)
+            bl = [x for x in block.splitlines() if x.strip()]
+            if len(bl) == len(chunk):
+                out.extend(bl)
+            else:
+                out.extend((bl + [""] * len(chunk))[:len(chunk)])
+                if log:
+                    log(f"    第 {i//batch+1} 批未能逐行对齐，已按整块输出")
+            continue
+        for j in range(len(chunk)):
+            out.append(got.get(j + 1, ""))
+    return out
+
+
 def translate_text(text, cfg, log=print, progress=None):
     """返回 (译文全文, 明细列表[(原文块, 译文块)], 数字校验缺失列表)"""
+    # 报表型输入：逐行翻译，中英严格对齐
+    if is_table_like(text):
+        raw_lines = text.splitlines()
+        idx = [i for i, l in enumerate(raw_lines) if l.strip()]
+        content = [raw_lines[i] for i in idx]
+        zh_lines = translate_lines(content, cfg, log=log)
+        details, missing = [], []
+        for src, zh in zip(content, zh_lines):
+            details.append((src, zh))
+            lost = numbers_of(src) - numbers_of(zh)
+            if lost:
+                missing.extend(sorted(lost))
+        if progress:
+            progress(1, 1)
+        return "\n".join(zh_lines), details, missing
+
     blocks = split_blocks(text, int(cfg.get("chunk_chars", 1600)))
     out, details, missing = [], [], []
     for i, b in enumerate(blocks, 1):
@@ -473,6 +532,12 @@ def run_gui():
 
 
 if __name__ == "__main__":
+    # 打包成 windowed exe 后 sys.stdout 为 None，CLI 模式需要兜底输出流
+    if sys.stdout is None or sys.stderr is None:
+        import tempfile
+        _log = open(os.path.join(tempfile.gettempdir(), "FinancialStatementTranslator_cli.log"), "a", encoding="utf-8")
+        sys.stdout = sys.stdout or _log
+        sys.stderr = sys.stderr or _log
     if "--cli" in sys.argv:
         i = sys.argv.index("--cli")
         sys.exit(run_cli(sys.argv[i + 1:]))
