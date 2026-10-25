@@ -532,6 +532,17 @@ def run_gui():
         log("完成。")
 
     run_btn.configure(command=lambda: threading.Thread(target=work, daemon=True).start())
+
+    # 命令行带文件：预填并在 --auto 时自动开始（拖拽 / 脚本调用都能用）
+    _pre = [a for a in sys.argv[1:] if not a.startswith("-")]
+    if _pre and os.path.exists(_pre[0]):
+        f_var.set(_pre[0])
+        _base, _ext = os.path.splitext(_pre[0])
+        o_var.set(_base + "_中文" + (_ext if _ext in (".docx", ".xlsx", ".txt") else ".docx"))
+        log("已载入命令行指定的文件。")
+        if "--auto" in sys.argv:
+            root.after(1200, lambda: run_btn.invoke())
+
     root.mainloop()
 
 
