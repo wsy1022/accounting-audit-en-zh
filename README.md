@@ -1,5 +1,10 @@
 # 财务报表中英翻译器 Financial Statement Translator
 
+[English](README.en.md) | **中文**
+
+[![build](https://github.com/wsy1022/accounting-audit-en-zh/actions/workflows/build.yml/badge.svg)](https://github.com/wsy1022/accounting-audit-en-zh/actions/workflows/build.yml)
+![license](https://img.shields.io/badge/license-MIT%20%2B%20CC%20BY%204.0-blue)
+
 把**英文财务报表 / 年报 / 审计报告 / 财务数据**翻译成中文，并用内置术语库锁定专业术语、自动核对数字不丢失。
 
 面向：财务、审计、投行、跨境业务人员，以及读英文年报吃力的学生。

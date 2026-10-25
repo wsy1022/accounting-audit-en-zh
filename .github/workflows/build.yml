@@ -1,0 +1,76 @@
+name: build-exe
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - ".github/workflows/build.yml"
+  pull_request:
+    paths:
+      - "app/**"
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-exe-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Windows exe
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r app/requirements.txt
+
+      - name: Smoke test (glossary + helper functions load)
+        working-directory: app
+        run: |
+          python -c "import translator, sys; n=len(translator.GLOSSARY); print('glossary entries:', n); sys.exit(0 if n > 700 else 1)"
+          python -c "import translator; print(translator.is_table_like('a\nb\nc\nd\ne\nf'))"
+
+      - name: Build one-file exe
+        working-directory: app
+        run: |
+          pyinstaller --noconfirm --clean --onefile --windowed `
+            --name FinancialStatementTranslator `
+            --add-data "glossary.json;." `
+            translator.py
+
+      - name: Report size and hash
+        working-directory: app
+        run: |
+          $f = "dist/FinancialStatementTranslator.exe"
+          $i = Get-Item $f
+          "size: {0:N0} bytes" -f $i.Length
+          "sha256: " + (Get-FileHash $f -Algorithm SHA256).Hash.ToLower()
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FinancialStatementTranslator-windows
+          path: app/dist/FinancialStatementTranslator.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Attach exe to release
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app/dist/FinancialStatementTranslator.exe
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || github.event.release.tag_name }}
