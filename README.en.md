@@ -65,7 +65,7 @@ The CSV imports straight into Excel, Anki or any dictionary app.
 ## The app
 
 <p align="center">
-  <img src="docs/screenshot.png" alt="Translator interface" width="880">
+  <img src="docs/app.png" alt="Translator interface" width="760">
 </p>
 
 ## What it will not do
@@ -92,7 +92,7 @@ accounting-audit-en-zh/
 │   ├── translator.py                   GUI + CLI
 │   ├── glossary.json                   term base bundled into the exe
 │   └── build_exe.bat                   one-click packaging
-├── docs/                               banner.svg · screenshot.png
+├── docs/                               banner.svg · app.png
 ├── examples/                           sample income statement + real output
 └── .github/workflows/build.yml         CI packaging
 ```

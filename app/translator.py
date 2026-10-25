@@ -495,6 +495,10 @@ def run_gui():
         txt.see("end")
         root.update_idletasks()
 
+    log(f"就绪：内置术语库 {len(GLOSSARY)} 条（教材术语 + 报表行项目）。")
+    log("用法：选择文件 → 填 API Key → 开始翻译；输出为中英对照 Word，表格逐行对应。")
+    log("运行时会核对每一条数字，译文中缺失的数字会在结束时列出。")
+
     def work():
         cfg.update({"api_key": k_var.get().strip(), "base_url": b_var.get().strip(),
                     "model": m_var.get().strip(), "bilingual": bil.get(),

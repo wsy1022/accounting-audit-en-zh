@@ -65,7 +65,7 @@ CSV 可直接导进 Excel、Anki、欧路词典。
 ## 界面
 
 <p align="center">
-  <img src="docs/screenshot.png" alt="翻译器界面" width="880">
+  <img src="docs/app.png" alt="翻译器界面" width="760">
 </p>
 
 ## 它做不到什么
@@ -92,7 +92,7 @@ accounting-audit-en-zh/
 │   ├── translator.py                   GUI + CLI
 │   ├── glossary.json                   exe 内置术语库
 │   └── build_exe.bat                   一键打包
-├── docs/                               banner.svg · screenshot.png
+├── docs/                               banner.svg · app.png
 ├── examples/                           示例利润表 + 真实输出
 └── .github/workflows/build.yml         CI 自动打包
 ```
